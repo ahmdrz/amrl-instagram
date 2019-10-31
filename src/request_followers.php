@@ -21,7 +21,7 @@ $rankToken = \InstagramAPI\Signatures::generateUUID();
 $response = $ig->people->getSelfFollowing($rankToken);
 
 $counter = 0;
-$maxCounter = 100;
+$maxCounter = 50;
 
 $users = $response->getUsers();
 shuffle($users);
@@ -30,32 +30,46 @@ foreach ($users as $user) {
     $userID = $user->getPk();
     printf("requesting list of followers from %s ...\n", $user->getUsername());
 
-    $followers = $ig->people->getFollowers($userID, $rankToken);
+    $followers = $ig->people->getFollowers($userID, $rankToken)->getUsers();
     shuffle($followers);
+    if (count($followers) > 30) $followers = array_slice($followers, 0, 30);
 
-    foreach ($followers->getUsers() as $follower) {
-        printf("checking candidate %s ...\n", $follower->getUsername());
+    foreach ($followers as $follower) {
+        sleep(rand(5, 10));
+        printf("checking candidate %s: ", $follower->getUsername());
         $friendship = $ig->people->getFriendship($follower->getPk());
-        if ($friendship->isOutgoingRequest()) continue;
-        if ($friendship->isFollowing()) continue;
-        if ($friendship->isFollowedBy()) continue;
+        if ($friendship->isOutgoingRequest()) {
+            printf("outgoing requested\n");
+            continue;
+        }
+        if ($friendship->isFollowing()) {
+            printf("currently following\n");
+            continue;
+        }
+        if ($friendship->isFollowedBy()) {
+            printf("currently followed-by\n");
+            continue;
+        }
+        if (in_array($follower->getUsername(), $requestedUsers)) {
+            printf("requested before\n");
+            continue;
+        }
 
-        printf("requesting follow to %s ...\n", $follower->getUsername());
+        printf("sending request\n");
 
         try {
             $ig->people->follow($follower->getPk());
-            array_push($requestedUsers, $follower->getPk());
+            array_push($requestedUsers, $follower->getUsername());
+
+            $fp = fopen('requested_users.json', 'w');
+            fwrite($fp, json_encode($requestedUsers));
+            fclose($fp);
         } catch (\Exception $e) {
             printf("couldn't follow %s!\n", $follower->getUsername());
         }
 
         sleep(rand(15, 30));
         $counter += 1;
-        if ($counter > $maxCounter) {
-            $fp = fopen('requested_users.json', 'w');
-            fwrite($fp, json_encode($requestedUsers));
-            fclose($fp);
-            break;
-        }
+        if ($counter > $maxCounter) exit(0);
     }
 }
