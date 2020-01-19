@@ -10,6 +10,9 @@ try {
     exit(0);
 }
 
+$counter = 0;
+$maxCounter = 50;
+
 $rankToken = \InstagramAPI\Signatures::generateUUID();
 $tags = $ig->hashtag->search('robotics');
 foreach ($tags->getResults() as $tag) {
@@ -19,6 +22,8 @@ foreach ($tags->getResults() as $tag) {
             printf("sending like request to %s ...\n", $item->getItemUrl());
             $ig->media->like($item->getPk(), 0);
             sleep(rand(10, 50));
+            $counter += 1;
+            if ($counter > $maxCounter) exit(0);
         }
     }
 }

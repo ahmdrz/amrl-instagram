@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/../vendor/autoload.php';
-require __DIR__ .'/../config.php';
+require __DIR__ . '/../config.php';
 
 $ig = new \InstagramAPI\Instagram();
 try {
@@ -8,6 +8,17 @@ try {
 } catch (\Exception $e) {
     echo 'Something went wrong: ' . $e->getMessage() . "\n";
     exit(0);
+}
+
+while (true) {
+    $max_id = null;
+    $r = $ig->media->getSavedFeed($max_id);
+    if (!$r->getMoreAvailable())
+        break;
+    foreach($r->getItems() as $item) {
+        print($item->getMedia()->getLink());
+    }
+    $max_id = $r->getNextMaxId();
 }
 
 $rankToken = \InstagramAPI\Signatures::generateUUID();
@@ -35,7 +46,7 @@ foreach ($response->getUsers() as $user) {
         printf("unfollowing %s ...\n", $username);
         try {
             $ig->people->unfollow($user->getPk());
-            sleep(rand(10, 50));
+            sleep(rand(20, 50));
         } catch (\Exception $e) {
             printf("couldn't unfollow %s!\n", $username);
         }
